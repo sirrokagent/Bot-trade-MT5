@@ -49,6 +49,8 @@ input int    MACD_Slow           = 26;
 input int    MACD_Signal         = 9;
 
 input group "Risk"
+input bool   UseFixedLotSize         = true;
+input double FixedLotSize            = 0.01;
 input double RiskPercentPerTrade     = 1.0;
 input double MaxDailyDrawdownPercent = 3.0;
 input int    MaxConcurrentTrades     = 1;
@@ -322,9 +324,21 @@ void TryOpenNewPosition()
    double minLot    = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
    double maxLot    = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MAX);
 
-   double lot = CalculateLotSize(AccountInfoDouble(ACCOUNT_BALANCE), RiskPercentPerTrade,
-                                  slDistancePoints, tickValue, tickSize, _Point,
-                                  lotStep, minLot, maxLot);
+   double lot;
+   if(UseFixedLotSize)
+     {
+      lot = MathFloor(FixedLotSize / lotStep + 0.00000001) * lotStep;
+      if(lot < minLot)
+         lot = minLot;
+      if(lot > maxLot)
+         lot = maxLot;
+     }
+   else
+     {
+      lot = CalculateLotSize(AccountInfoDouble(ACCOUNT_BALANCE), RiskPercentPerTrade,
+                              slDistancePoints, tickValue, tickSize, _Point,
+                              lotStep, minLot, maxLot);
+     }
 
    if(lot <= 0.0)
       return;
