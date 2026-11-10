@@ -1,0 +1,18 @@
+#ifndef OMIDOT_TYPES_MQH
+#define OMIDOT_TYPES_MQH
+
+enum ENUM_TRADE_DIRECTION
+  {
+   DIR_NONE,
+   DIR_BUY,
+   DIR_SELL
+  };
+
+enum ENUM_TRADING_MODE
+  {
+   MODE_TREND,
+   MODE_MEAN_REVERSION,
+   MODE_BREAKOUT
+  };
+
+#endif
