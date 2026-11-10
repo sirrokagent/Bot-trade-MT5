@@ -53,7 +53,9 @@ input bool   UseFixedLotSize         = true;
 input double FixedLotSize            = 0.01;
 input double RiskPercentPerTrade     = 1.0;
 input double MaxDailyDrawdownPercent = 3.0;
-input int    MaxConcurrentTrades     = 1;
+input int    MaxConcurrentTrades     = 5;
+input double BalancePerOrder         = 50.0;
+input int    MaxOrdersPerSignal      = 5;
 input int    TradingStartHour        = 7;
 input int    TradingEndHour          = 20;
 
@@ -282,7 +284,7 @@ void TryOpenNewPosition()
    if(IsDailyDrawdownLocked(g_dayStartEquity, AccountInfoDouble(ACCOUNT_EQUITY), MaxDailyDrawdownPercent))
       return;
 
-   if(CountEAPositions() >= MaxConcurrentTrades)
+   if(CountEAPositions() > 0)
       return;
 
    ENUM_TRADE_DIRECTION signalDir = EvaluateEntrySignal();
@@ -343,11 +345,26 @@ void TryOpenNewPosition()
    if(lot <= 0.0)
       return;
 
-   bool sent = (signalDir == DIR_BUY) ? trade.Buy(lot, _Symbol, 0.0, sl, tp, "OmidotEA")
-                                       : trade.Sell(lot, _Symbol, 0.0, sl, tp, "OmidotEA");
+   int numberOfOrders = (int)MathFloor(AccountInfoDouble(ACCOUNT_BALANCE) / BalancePerOrder) + 1;
+   if(numberOfOrders > MaxOrdersPerSignal)
+      numberOfOrders = MaxOrdersPerSignal;
+   if(numberOfOrders > MaxConcurrentTrades)
+      numberOfOrders = MaxConcurrentTrades;
+   if(numberOfOrders < 1)
+      numberOfOrders = 1;
+
+   int sentCount = 0;
+   for(int i = 0; i < numberOfOrders; i++)
+     {
+      bool sent = (signalDir == DIR_BUY) ? trade.Buy(lot, _Symbol, 0.0, sl, tp, "OmidotEA")
+                                          : trade.Sell(lot, _Symbol, 0.0, sl, tp, "OmidotEA");
+      if(sent)
+         sentCount++;
+     }
 
    LogEvent(g_logFileName, TimeToString(TimeCurrent(), TIME_DATE | TIME_SECONDS),
-            "ENTRY", (sent ? "order sent" : "order failed") + StringFormat(" dir=%d lot=%.2f", signalDir, lot));
+            "ENTRY", StringFormat("dir=%d lot=%.2f orders_requested=%d orders_sent=%d",
+                                   signalDir, lot, numberOfOrders, sentCount));
   }
 
 //+------------------------------------------------------------------+
