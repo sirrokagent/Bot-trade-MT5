@@ -340,15 +340,15 @@ void TryOpenNewPosition()
 void ManageOpenPositions()
   {
    double macdMainPrev, macdMainCurr;
-   GetLastTwo(h_MACD, 0, macdMainPrev, macdMainCurr);
    double macdSignalPrev, macdSignalCurr;
-   GetLastTwo(h_MACD, 1, macdSignalPrev, macdSignalCurr);
-
    double rsiPrev, rsiCurr;
-   GetLastTwo(h_RSI, 0, rsiPrev, rsiCurr);
-
    double atrValue;
-   GetLastOne(h_ATR, 0, atrValue);
+
+   if(!GetLastTwo(h_MACD, 0, macdMainPrev, macdMainCurr) ||
+      !GetLastTwo(h_MACD, 1, macdSignalPrev, macdSignalCurr) ||
+      !GetLastTwo(h_RSI, 0, rsiPrev, rsiCurr) ||
+      !GetLastOne(h_ATR, 0, atrValue))
+      return;
    double atrPoints = atrValue / _Point;
 
    for(int i = PositionsTotal() - 1; i >= 0; i--)
@@ -404,7 +404,10 @@ void ManageOpenPositions()
          double breakevenSL2 = ComputeBreakevenSL(posDir, entryPrice, spreadPoints2, _Point);
          bool slNotYetAtBreakeven = (posDir == DIR_BUY) ? (currentSL < breakevenSL2) : (currentSL > breakevenSL2 || currentSL == 0.0);
          if(slNotYetAtBreakeven)
+           {
             trade.PositionModify(ticket, breakevenSL2, PositionGetDouble(POSITION_TP));
+            currentSL = breakevenSL2;
+           }
         }
 
       if(UseTrailingStop)
