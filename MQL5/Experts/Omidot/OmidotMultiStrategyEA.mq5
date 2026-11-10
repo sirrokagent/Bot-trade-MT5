@@ -398,7 +398,8 @@ void ManageOpenPositions()
            }
         }
 
-      if(UseBreakeven && !alreadyPartial && profitPoints >= BreakevenTriggerPips)
+      double pipSize = _Point * ((_Digits == 3 || _Digits == 5) ? 10.0 : 1.0);
+      if(UseBreakeven && !alreadyPartial && (profitPoints * _Point) >= BreakevenTriggerPips * pipSize)
         {
          double spreadPoints2 = (SymbolInfoDouble(_Symbol, SYMBOL_ASK) - SymbolInfoDouble(_Symbol, SYMBOL_BID)) / _Point;
          double breakevenSL2 = ComputeBreakevenSL(posDir, entryPrice, spreadPoints2, _Point);
