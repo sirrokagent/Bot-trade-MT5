@@ -274,6 +274,27 @@ int CountEAPositions()
   }
 
 //+------------------------------------------------------------------+
+void CloseOppositePositions(ENUM_TRADE_DIRECTION keepDir)
+  {
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+     {
+      ulong ticket = PositionGetTicket(i);
+      if(ticket == 0)
+         continue;
+      if(PositionGetString(POSITION_SYMBOL) != _Symbol || PositionGetInteger(POSITION_MAGIC) != MagicNumber)
+         continue;
+
+      ENUM_TRADE_DIRECTION posDir = (PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY) ? DIR_BUY : DIR_SELL;
+      if(posDir != keepDir)
+        {
+         trade.PositionClose(ticket);
+         LogEvent(g_logFileName, TimeToString(TimeCurrent(), TIME_DATE | TIME_SECONDS),
+                   "EXIT", StringFormat("closed_opposite_direction ticket=%I64u", ticket));
+        }
+     }
+  }
+
+//+------------------------------------------------------------------+
 void TryOpenNewPosition()
   {
    MqlDateTime nowStruct;
@@ -282,9 +303,6 @@ void TryOpenNewPosition()
       return;
 
    if(IsDailyDrawdownLocked(g_dayStartEquity, AccountInfoDouble(ACCOUNT_EQUITY), MaxDailyDrawdownPercent))
-      return;
-
-   if(CountEAPositions() > 0)
       return;
 
    ENUM_TRADE_DIRECTION signalDir = EvaluateEntrySignal();
@@ -304,6 +322,12 @@ void TryOpenNewPosition()
    toggles.useMACD           = UseMACDFilter;
 
    if(!PassesFilters(signalDir, TradingMode, filterInputs, toggles))
+      return;
+
+   CloseOppositePositions(signalDir);
+
+   int remainingCapacity = MaxConcurrentTrades - CountEAPositions();
+   if(remainingCapacity <= 0)
       return;
 
    double atrValue;
@@ -348,8 +372,8 @@ void TryOpenNewPosition()
    int numberOfOrders = (int)MathFloor(AccountInfoDouble(ACCOUNT_BALANCE) / BalancePerOrder) + 1;
    if(numberOfOrders > MaxOrdersPerSignal)
       numberOfOrders = MaxOrdersPerSignal;
-   if(numberOfOrders > MaxConcurrentTrades)
-      numberOfOrders = MaxConcurrentTrades;
+   if(numberOfOrders > remainingCapacity)
+      numberOfOrders = remainingCapacity;
    if(numberOfOrders < 1)
       numberOfOrders = 1;
 
